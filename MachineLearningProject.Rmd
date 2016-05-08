@@ -1,0 +1,115 @@
+---
+title: "Machine Learning Project"
+author: "Daniel Frett"
+date: "8 May 2016"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Summary
+
+I got the data from the links for training and testing.  I cleaned up the training data by removing fields that had a majority of NAs or blanks.  I then cross-validated by creating a training and testing dataset for the training data. I first tried using rpart but only had a 49% accuracy in predicting classe.  I then tried random forest and successfully (after running for 5 hours) got a 98.9% Accuracy.
+
+## Getting the data
+
+Below is the code for calling the relevant libraries and loading the files.
+
+```{r getdata}
+
+library(dplyr)
+library(caret)
+library(kernlab)
+
+training <- read.csv("~/Coursera/MachineLearning/pml-training.csv", stringsAsFactors = TRUE)
+testing <- read.csv("~/Coursera/MachineLearning/pml-testing.csv", stringsAsFactors = TRUE)
+
+```
+## Clean up the data
+
+I used summary(training) to check the data and removed all columns that were calculated or had missing data.  I haven't printed out the results as it was too verbose.
+
+```{r cleandata}
+training <- select(training, -(X:var_yaw_belt))
+training <- select(training, -starts_with("stddev_"))
+training <- select(training, -starts_with("var_"))
+training <- select(training, -starts_with("avg_"))
+training <- select(training, -starts_with("kurtosis_"))
+training <- select(training, -starts_with("skewness_"))
+training <- select(training, -starts_with("max_"))
+training <- select(training, -starts_with("min_"))
+training <- select(training, -starts_with("amplitude_"))
+```
+
+## Cross validate
+
+I then cross validated the training data set.
+
+```{r crossvalidate}
+inTrain <- createDataPartition(y=training$classe, p=0.75, list=FALSE)
+sub_training <- training[inTrain,]
+sub_testing <- training[-inTrain,]
+```
+
+## Using rpart
+
+I then used rpart to see if I could predict the classe.
+
+```{r rpart}
+tree_modfit <- train(classe ~ .,method="rpart",data=sub_training)
+tree_predict <- predict(tree_modfit, sub_testing)
+confusionMatrix(tree_predict, sub_testing$classe)
+```
+
+You can see from the results that it wasn't satisfactory.
+
+## Using randomforest
+
+I then used random forest which took 5 hours to run, so I have commented out the section.
+
+```{r rf}
+##rf_modfit <- train(classe~ .,data=sub_training,method="rf",prox=TRUE)
+##rf_predict <- predict(rf_modfit, sub_testing)
+##confusionMatrix(rf_predict, sub_testing$classe)
+
+```
+
+However, here is the Confusion Matrix:
+
+Confusion Matrix and Statistics
+
+          Reference
+Prediction    A    B    C    D    E
+         A 1394   11    0    0    0
+         B    1  934    4    0    0
+         C    0    4  850   25    3
+         D    0    0    1  778    2
+         E    0    0    0    1  896
+
+Overall Statistics
+                                          
+               Accuracy : 0.9894          
+                 95% CI : (0.9861, 0.9921)
+    No Information Rate : 0.2845          
+    P-Value [Acc > NIR] : < 2.2e-16       
+                                          
+                  Kappa : 0.9866          
+ Mcnemar's Test P-Value : NA              
+
+Statistics by Class:
+
+                     Class: A Class: B Class: C Class: D Class: E
+Sensitivity            0.9993   0.9842   0.9942   0.9677   0.9945
+Specificity            0.9969   0.9987   0.9921   0.9993   0.9998
+Pos Pred Value         0.9922   0.9947   0.9637   0.9962   0.9989
+Neg Pred Value         0.9997   0.9962   0.9988   0.9937   0.9988
+Prevalence             0.2845   0.1935   0.1743   0.1639   0.1837
+Detection Rate         0.2843   0.1905   0.1733   0.1586   0.1827
+Detection Prevalence   0.2865   0.1915   0.1799   0.1593   0.1829
+Balanced Accuracy      0.9981   0.9915   0.9931   0.9835   0.9971
+
+You can see the result is a very promising predictor.
+
+
